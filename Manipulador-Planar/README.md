@@ -1,171 +1,383 @@
-# Manipulador Planar 2-DOF com Controle PID
+# 🤖 Projeto de Robótica - Manipulador Planar 2-DOF
 
-Simulação de um braço robótico planar com 2 juntas rotacionais, implementado em PyBullet com controle PID em malha fechada, detecção de colisão e testes de perturbação.
+<div align="center">
 
-## Características Implementadas
+![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
+![PyBullet](https://img.shields.io/badge/PyBullet-3.2+-green.svg)
+![Node-RED](https://img.shields.io/badge/Node--RED-Dashboard-red.svg)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-### 1. Cinemática (FK/IK)
-- **Forward Kinematics**: Cálculo da posição do efetuador a partir dos ângulos das juntas
-- **Inverse Kinematics**: Solução robusta de 2 links com clamping para o espaço de trabalho
-- Validação contra alcance mínimo e máximo
+**Simulação de um braço robótico planar com controle PID, detecção de obstáculos e integração Node-RED**
 
-### 2. Controle PID
-- Controlador PID individual para cada junta (q1, q2)
-- Erro angular normalizado (diferença angular mínima)
-- Anti-windup para evitar saturação do integral
-- **Interface em tempo real**: Sliders no PyBullet para ajustar Kp, Ki, Kd em execução
+[Funcionalidades](#-funcionalidades) •
+[Instalação](#-instalação) •
+[Execução](#-execução) •
+[Arquitetura](#-arquitetura) •
+[Node-RED](#-integração-node-red)
 
-### 3. Detecção de Colisão e Evasão
-- Verificação de caminho sem colisão antes de executar movimento
-- Obstáculos esféricos com margem de segurança ajustável
-- Replanejamento automático: se colisão detectada, braço mantém ângulos seguros
-- Função `avoid_point_obstacles()` que desloca alvos para fora de obstáculos
+</div>
 
-### 4. Pick & Drop
-- Grasp automático quando efetuador próximo ao alvo (< 0.06 m)
-- Constraint físico rígido (JOINT_FIXED) para transporte
-- Drop automático ao atingir zona de deposito (x < 0.4)
-- Botões de controle manual (`grasp_toggle`, `release`)
+---
 
-### 5. Teste de Perturbação
-- Módulo `perturbation.py` para adicionar payload ao efetuador
-- Simula diferentes massas no efetuador
-- Testa resposta do controle PID a mudanças de carga
-- Habilitar com `ENABLE_PERTURBATION_TEST = True`
+## 📋 Sobre o Projeto
 
-### 6. Métricas de Desempenho
-- **Erro médio de posição**: Média dos erros angulares absolutosdo simulação
-- **Energia total**: Integral de |torque × velocidade| ao longo do tempo
-- **Overshoot máximo**: Maior desvio do ângulo de referência
-- **Tempo de estabilização**: Tempo até permanecer dentro de 0.03 rad por 0.6s
-- Log enviado via MQTT/HTTP a cada ~0.05s
+Este projeto implementa um **manipulador robótico planar de 2 graus de liberdade (2-DOF)** com:
+- Controle PID em malha fechada por torque
+- Pinça funcional com dedos móveis (prismatic joints)
+- Detecção automática de obstáculos e desvio de trajetória
+- Operações de pick-and-place automatizadas
+- Métricas de desempenho (overshoot, settling time, energia)
+- Integração com Node-RED para visualização em tempo real
 
-### 7. Autotuning
-- Botão `autotune` para ativar rotina de sintonização automática
-- Algoritmo tipo Twiddle: ajusta Kp de cada junta iterativamente
-- Avalia desempenho em janelas de 2 segundos
-- Imprime logs de progresso no console
+---
 
-## Arquitetura
+## 🛠️ Stack Tecnológica
+
+| Tecnologia | Versão | Descrição |
+|------------|--------|-----------|
+| **Python** | 3.8+ | Linguagem principal |
+| **PyBullet** | 3.2+ | Simulador de física e visualização 3D |
+| **NumPy** | 1.21+ | Cálculos matemáticos e matrizes |
+| **paho-mqtt** | 1.6+ | Cliente MQTT para Node-RED |
+| **Node-RED** | 3.0+ | Dashboard de visualização (opcional) |
+| **Mosquitto** | 2.0+ | Broker MQTT (opcional) |
+
+---
+
+## ✨ Funcionalidades
+
+### Robô e Controle
+- ✅ **Manipulador 2-DOF** - Braço articulado com 2 juntas rotacionais no plano XY
+- ✅ **Controle PID** - Malha fechada com controle de torque
+- ✅ **Cinemática** - Direta e Inversa implementadas
+- ✅ **Pinça Funcional** - Dedos móveis com prismatic joints
+- ✅ **Ajuste em Tempo Real** - Sliders para Kp, Ki, Kd
+
+### Navegação
+- ✅ **Detecção de Obstáculos** - Algoritmo de distância ponto-segmento
+- ✅ **Desvio Automático** - Recálculo de trajetória com waypoints
+- ✅ **Margem de Segurança** - Considera tamanho do braço
+
+### Operações
+- ✅ **Pick-and-Place** - Ciclos automatizados de pegar e soltar
+- ✅ **Perturbação** - Simulação de peso extra no efetuador
+- ✅ **Múltiplos Ciclos** - Configurável (padrão: 6 ciclos)
+
+### Métricas e Logging
+- ✅ **Overshoot** - Ultrapassagem máxima do alvo
+- ✅ **Settling Time** - Tempo de acomodação (erro < 0.5°)
+- ✅ **Energia Total** - Integral do torque aplicado
+- ✅ **Erro Médio** - Erro angular médio por ciclo
+- ✅ **Log CSV** - Exportação de dados com timestamp
+- ✅ **MQTT** - Envio em tempo real para Node-RED
+
+---
+
+## 📁 Estrutura do Projeto
 
 ```
-projeto_robotica_q1.py      - Script principal (loop de simulação)
-pid.py                      - Classe PIDController com anti-windup
-robot_arm.py                - Classe RobotArm (FK/IK, colisão, grasp)
-planner.py                  - Funções de planejamento (avoid_point_obstacles)
-perturbation.py             - Classe PerturbationTester (payload)
-logger_node_red.py          - LoggerNodeRed (MQTT + HTTP)
-planar_arm.urdf             - Descrição URDF do braço (2 links, 2 juntas)
-requirements.txt            - Dependências Python
+ProjetoRobotica/
+├── README.md                    # Este arquivo
+├── Manipulador-Planar/
+│   ├── braco_robotico.py       # 🎯 Script principal da simulação
+│   ├── projeto_robotica_q1.py  # Script alternativo (versão básica)
+│   ├── planar_arm.urdf         # Descrição URDF do robô
+│   ├── requirements.txt        # Dependências Python
+│   ├── nodered_flow.json       # Flow para importar no Node-RED
+│   ├── nodered_setup.md        # Instruções de configuração Node-RED
+│   └── log_braco_*.csv         # Logs gerados pela simulação
 ```
 
-## Instalação e Uso
+---
 
-### 1. Instalar dependências
+## 🚀 Instalação
+
+### Pré-requisitos
+- Python 3.8 ou superior
+- pip (gerenciador de pacotes Python)
+
+### 1. Clonar o Repositório
 ```bash
-cd "c:\Users\joluc\OneDrive\Documents\GitHub\ProjetoRobotica\Manipulador-Planar"
-python -m pip install -r requirements.txt
+git clone https://github.com/JoaoLCardozo/ProjetoRobotica.git
+cd ProjetoRobotica/Manipulador-Planar
 ```
 
-### 2. Executar simulação básica
+### 2. Criar Ambiente Virtual (Recomendado)
 ```bash
-python projeto_robotica_q1.py
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+
+# Linux/Mac
+source venv/bin/activate
 ```
 
-### 3. Testar com perturbação (payload)
-Edite `projeto_robotica_q1.py` e altere:
-```python
-ENABLE_PERTURBATION_TEST = True
-```
-
-Depois execute:
+### 3. Instalar Dependências
 ```bash
-python projeto_robotica_q1.py
+pip install -r requirements.txt
 ```
 
-O robô será simulado com um payload de 0.3 kg no efetuador.
-
-### 4. Usar com Node-RED (MQTT/HTTP)
-Altere a configuração no arquivo:
-```python
-USE_MQTT = True
-MQTT_BROKER = "seu.broker.aqui"
-MQTT_TOPIC = "robotica/q1/logs"
-HTTP_NODE_RED = "http://localhost:1880/seu_endpoint"
+Ou instale manualmente:
+```bash
+pip install pybullet numpy paho-mqtt
 ```
 
-Os dados serão enviados em formato JSON:
+---
+
+## ▶️ Execução
+
+### Simulação Básica
+```bash
+cd Manipulador-Planar
+python braco_robotico.py
+```
+
+### O que acontece:
+1. 🖥️ Abre janela do PyBullet com visualização 3D
+2. 🤖 Robô inicia na posição de repouso
+3. ⛔ Obstáculo vermelho aparece no cenário
+4. 📦 Objeto é criado na zona de spawn
+5. 🔄 Robô executa 6 ciclos de pick-and-place
+6. 📊 Log é salvo em arquivo CSV
+
+### Controles na Interface
+
+| Slider | Descrição | Valor Padrão |
+|--------|-----------|--------------|
+| `Kp` | Ganho Proporcional | 80.0 |
+| `Ki` | Ganho Integral | 10.0 |
+| `Kd` | Ganho Derivativo | 15.0 |
+| `Perturbação` | Simula peso extra | 0 |
+| `Obstáculo ON/OFF` | Ativa/desativa obstáculo | ON |
+
+---
+
+## 🏗️ Arquitetura
+
+### Diagrama de Classes
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      BracoRobotico                          │
+├─────────────────────────────────────────────────────────────┤
+│ - robot_id: int                                             │
+│ - pid1, pid2: ControladorPID                                │
+│ - logger: DataLogger                                        │
+│ - mqtt_client: NodeRedClient                                │
+├─────────────────────────────────────────────────────────────┤
+│ + inicializar()                                             │
+│ + mover_para_seguro(pos_alvo, duracao)                      │
+│ + verificar_colisao_caminho(pos_inicio, pos_fim)            │
+│ + calcular_waypoints_desvio(pos_inicio, pos_fim)            │
+│ + executar_ciclo(numero_ciclo)                              │
+│ + abrir_pinca() / fechar_pinca()                            │
+└─────────────────────────────────────────────────────────────┘
+                              │
+           ┌──────────────────┼──────────────────┐
+           ▼                  ▼                  ▼
+┌──────────────────┐  ┌───────────────┐  ┌───────────────────┐
+│  ControladorPID  │  │   DataLogger  │  │   NodeRedClient   │
+├──────────────────┤  ├───────────────┤  ├───────────────────┤
+│ - kp, ki, kd     │  │ - dados[]     │  │ - client: mqtt    │
+│ - integral       │  │ - overshoot   │  │ - broker: str     │
+│ - erro_anterior  │  │ - settling    │  │ - topico_base     │
+├──────────────────┤  ├───────────────┤  ├───────────────────┤
+│ + calcular()     │  │ + registrar() │  │ + publicar()      │
+│ + reset()        │  │ + salvar()    │  │ + enviar_*()      │
+└──────────────────┘  └───────────────┘  └───────────────────┘
+```
+
+### Fluxo de Controle
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  Referência │───▶│  Erro (e)   │───▶│     PID     │
+│   (θ_ref)   │    │ θ_ref - θ   │    │ P + I + D   │
+└─────────────┘    └─────────────┘    └──────┬──────┘
+                                             │
+                                             ▼
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   Encoder   │◀───│    Robô     │◀───│   Torque    │
+│  (θ_medido) │    │  (PyBullet) │    │   (τ)       │
+└─────────────┘    └─────────────┘    └─────────────┘
+```
+
+### Algoritmo de Desvio de Obstáculos
+
+```
+1. Verificar se caminho direto tem colisão
+   └─▶ Calcula distância ponto-segmento ao obstáculo
+   └─▶ Se distância < (raio + margem): COLISÃO
+
+2. Se colisão detectada, calcular waypoints:
+   └─▶ Waypoint 1: Retrair (X = 0.25, Y = atual)
+   └─▶ Waypoint 2: Mover lateral (X = 0.25, Y = destino)
+   └─▶ Waypoint 3: Avançar ao destino final
+
+3. Executar movimento por cada waypoint
+```
+
+---
+
+## 📊 Integração Node-RED
+
+O projeto suporta visualização em tempo real via MQTT.
+
+### Configuração Rápida
+
+1. **Instalar Mosquitto** (broker MQTT):
+   - Download: https://mosquitto.org/download/
+
+2. **Iniciar Node-RED**:
+   ```bash
+   node-red
+   ```
+
+3. **Importar Flow**:
+   - Acesse http://localhost:1880
+   - Menu → Import → `nodered_flow.json`
+   - Deploy
+
+4. **Acessar Dashboard**:
+   - http://localhost:1880/ui
+
+### Tópicos MQTT Publicados
+
+| Tópico | Dados | Frequência |
+|--------|-------|------------|
+| `robo/posicao` | `{x, y}` | 10 Hz |
+| `robo/erro` | `{erro1_deg, erro2_deg}` | 10 Hz |
+| `robo/pid` | `{torque1, torque2}` | 10 Hz |
+| `robo/estado` | `{estado, ciclo}` | Por estado |
+| `robo/metricas` | JSON completo | 10 Hz |
+| `robo/relatorio_ciclo` | Resumo do ciclo | Por ciclo |
+
+### Exemplo de Payload
+
 ```json
 {
-  "tempo": 5.123,
-  "junta1": {"ref": 0.5, "real": 0.48, "erro": 0.02, "torque": 50.2},
-  "junta2": {"ref": 1.2, "real": 1.19, "erro": 0.01, "torque": 45.1},
-  "metrics": {
-    "erro_medio": 0.015,
-    "energia_total": 234.5,
-    "overshoot_max": 0.08,
-    "settling_time": 2.5
-  },
-  "target": {"x": 1.2, "y": 0.6}
+  "erro1_deg": 0.125,
+  "erro2_deg": 0.087,
+  "energia": 45.23,
+  "posicao_x": 0.4521,
+  "posicao_y": 0.2834,
+  "ciclo": 2,
+  "estado": "TRANSPORTAR",
+  "overshoot1_deg": 1.234,
+  "overshoot2_deg": 0.876,
+  "settling_time1_s": 0.342,
+  "settling_time2_s": 0.298
 }
 ```
 
-## Controles na GUI PyBullet
+---
 
-### Sliders
-- `kp1`, `ki1`, `kd1`: Ganhos PID da junta 1
-- `kp2`, `ki2`, `kd2`: Ganhos PID da junta 2
+## 📈 Métricas de Desempenho
 
-### Botões (0/1)
-- `grasp_toggle`: Aciona grasp manual
-- `release`: Libera objeto
-- `autotune`: Ativa/desativa autotuning
+### Definições
 
-## Parâmetros Ajustáveis
+| Métrica | Fórmula | Descrição |
+|---------|---------|-----------|
+| **Erro Médio** | $\bar{e} = \frac{1}{N}\sum_{i=1}^{N}\|e_i\|$ | Média dos erros absolutos |
+| **Energia** | $E = \int_0^T \|\tau\| \, dt$ | Integral do torque aplicado |
+| **Overshoot** | $OS = \frac{\theta_{max} - \theta_{alvo}}{\theta_{alvo} - \theta_0} \times 100\%$ | Ultrapassagem percentual |
+| **Settling Time** | $t_s : \|e(t)\| < 0.5°, \forall t > t_s$ | Tempo até estabilização |
 
-No código `projeto_robotica_q1.py`:
+### Exemplo de Relatório
+
+```
+─────────────────────────────────────────────
+📊 RELATÓRIO DO CICLO 3
+─────────────────────────────────────────────
+   ⏱️  Tempo total:      8.54 s
+   📐 Erro médio:       0.23°
+   ⚡ Energia gasta:    156.7 J
+   📈 Amostras:         2050
+   📉 Overshoot J1:     1.45°
+   📉 Overshoot J2:     0.98°
+   ⏳ Settling Time J1: 0.412 s
+   ⏳ Settling Time J2: 0.356 s
+─────────────────────────────────────────────
+```
+
+---
+
+## ⚙️ Parâmetros Configuráveis
+
+### No código `braco_robotico.py`:
 
 ```python
-# Obstáculos
-obstacles = [
-  {'pos': (0.8, 0.5), 'radius': 0.15},
-  {'pos': (1.2, 0.0), 'radius': 0.12}
-]
+# Comprimento dos elos (metros)
+L1 = 0.40  # Elo 1
+L2 = 0.35  # Elo 2
 
-# Ganhos PID iniciais
-pid1 = PIDController(kp=60.0, ki=1.0, kd=5.0, ...)
-pid2 = PIDController(kp=60.0, ki=1.0, kd=5.0, ...)
+# Ganhos PID
+Kp = 80.0   # Proporcional
+Ki = 10.0   # Integral
+Kd = 15.0   # Derivativo
 
-# Tolerâncias
-settle_tol = 0.03  # rad
-settle_required = 0.6  # segundos
+# Posições do cenário
+pos_repouso = [0.30, 0.0]    # Posição inicial
+pos_spawn = [0.50, 0.30]     # Onde objeto aparece
+pos_destino = [0.50, -0.30]  # Onde entregar
 
-# Comprimentos dos links
-L1 = 1.0
-L2 = 1.0
+# Obstáculo
+obstaculo_pos = [0.60, 0.0]  # Posição X, Y
+obstaculo_raio = 0.05        # Raio em metros
+
+# Número de ciclos
+num_ciclos = 6
 ```
 
-## Limitações e Próximas Melhorias
+---
 
-1. **Cinemática inversa única**: Atualmente elege apenas um dos 2 possíveis ângulos (cotovelo para cima)
-2. **Planejamento simplificado**: A evasão de obstáculos é reativa; não há planejamento global (RRT, etc.)
-3. **Autotuning básico**: Ajusta apenas Kp; versão futura poderia incluir Ki, Kd e usar otimização mais robusta
-4. **Física simplificada**: Sem atrito, sem limite de velocidade efetivo, sem deformações elásticas
+## 🔧 Troubleshooting
 
-## Exemplo de Execução
-
-```
-Iniciando simulação melhorada...
-Payload attached: 0.3 kg
-Autotune enabled = True
-Tune eval time=2.04, avg_err=0.1245, params=[60.0, 60.0], dp=[6.0, 6.0]
-Collision detected! Path not safe at t=15.32
-Tune eval time=4.08, avg_err=0.0954, params=[66.0, 60.0], dp=[6.6, 6.0]
-...
+### Erro: `ModuleNotFoundError: No module named 'pybullet'`
+```bash
+pip install pybullet
 ```
 
-## Referências
+### Erro: `MQTT não conecta`
+- Verifique se Mosquitto está rodando na porta 1883
+- Teste: `netstat -an | findstr 1883`
 
-- **PyBullet Documentation**: https://pybullet.org/
-- **PID Control**: https://en.wikipedia.org/wiki/Proportional%E2%80%93integral%E2%80%93derivative_controller
-- **Robotica**: Inverse kinematics for planar 2-link arm
+### Braço não alcança posição
+- Verifique se a posição está dentro do alcance:
+  - Mínimo: |L1 - L2| = 0.05m
+  - Máximo: L1 + L2 = 0.75m
+
+### Simulação muito lenta
+- Reduza a frequência de log (altere `passo % 24` para valor maior)
+- Desative MQTT se não estiver usando
+
+---
+
+## 👥 Autores
+
+- **João Lucas Cardozo** - [GitHub](https://github.com/JoaoLCardozo)
+
+---
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+---
+
+## 📚 Referências
+
+- [PyBullet Documentation](https://pybullet.org/)
+- [PID Control - Wikipedia](https://en.wikipedia.org/wiki/Proportional%E2%80%93integral%E2%80%93derivative_controller)
+- [Inverse Kinematics for Planar 2-Link Arm](https://robotacademy.net.au/lesson/inverse-kinematics-for-a-2-joint-robot-arm-using-geometry/)
+- [Node-RED Dashboard](https://flows.nodered.org/node/node-red-dashboard)
+- [MQTT Protocol](https://mqtt.org/)
+
+---
+
+<div align="center">
+
+**⭐ Se este projeto foi útil, considere dar uma estrela!**
+
+</div>
