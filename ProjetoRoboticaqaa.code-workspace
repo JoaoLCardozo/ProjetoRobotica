@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "ProjetoRobotica",
+			"path": "."
+		},
+		{
+			"name": "robo-aspirador",
+			"path": "../ProjetoRoboAspirador/N2-Robotica/robo-aspirador"
+		}
+	],
+	"settings": {}
+}

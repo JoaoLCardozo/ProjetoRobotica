@@ -1,0 +1,26 @@
+[
+  {
+    "execution": 1,
+    "total_time": 90.0,
+    "coverage_percent": 71.74,
+    "energy": 175.0,
+    "distance": 32.03,
+    "collisions": 65
+  },
+  {
+    "execution": 2,
+    "total_time": 90.0,
+    "coverage_percent": 77.3,
+    "energy": 174.18,
+    "distance": 32.58,
+    "collisions": 64
+  },
+  {
+    "execution": 3,
+    "total_time": 90.0,
+    "coverage_percent": 77.34,
+    "energy": 176.8,
+    "distance": 30.98,
+    "collisions": 73
+  }
+]
