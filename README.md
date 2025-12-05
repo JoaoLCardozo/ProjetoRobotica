@@ -103,7 +103,7 @@ Manipulador-Planar/
 ### Execução
 
 ```bash
-cd robo-aspirador
+cd Robo-Aspirador
 python main.py
 ```
 
@@ -116,7 +116,7 @@ python main.py
 ### Estrutura
 
 ```
-robo-aspirador/
+Robo-Aspirador/
 ├── main.py                # Script principal
 ├── node_red_flow.json     # Flow Node-RED
 ├── src/
