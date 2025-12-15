@@ -165,7 +165,7 @@ class DirtManager:
         """Retorna estatísticas de sujeira."""
         uncollected = self.get_uncollected_count()
 
-        # Tempo médio de coleta
+        # Tempo médio de coleta (tempo desde spawn até coleta)
         collection_times = [
             d.collection_time - d.spawn_time
             for d in self.dirt_points
@@ -173,17 +173,46 @@ class DirtManager:
         ]
         avg_collection_time = np.mean(collection_times) if collection_times else 0
 
+        # Eficiência temporal: média de tempo entre limpezas consecutivas
+        travel_times = self.get_travel_times()
+        temporal_efficiency = np.mean(travel_times) if travel_times else 0
+
         return {
             'total_spawned': self.total_spawned,
             'total_collected': self.total_collected,
             'uncollected': uncollected,
             'collection_rate': self.total_collected / self.total_spawned if self.total_spawned > 0 else 0,
-            'avg_collection_time': avg_collection_time
+            'avg_collection_time': avg_collection_time,
+            'temporal_efficiency': temporal_efficiency
         }
 
     def get_all_uncollected_positions(self):
         """Retorna lista de posições de sujeira não coletada."""
         return [(d.x, d.y) for d in self.dirt_points if not d.collected]
+
+    def get_all_collected_positions(self):
+        """Retorna lista de posições de sujeira coletada."""
+        return [(d.x, d.y) for d in self.dirt_points if d.collected]
+
+    def get_travel_times(self):
+        """Retorna lista de tempos de deslocamento até cada ponto limpo.
+
+        Calcula o tempo entre a coleta de um ponto e o próximo,
+        útil para histograma de eficiência temporal.
+        """
+        collected_points = [d for d in self.dirt_points if d.collected]
+        if len(collected_points) < 2:
+            return []
+
+        # Ordenar por tempo de coleta
+        collected_points.sort(key=lambda d: d.collection_time)
+
+        travel_times = []
+        for i in range(1, len(collected_points)):
+            time_diff = collected_points[i].collection_time - collected_points[i-1].collection_time
+            travel_times.append(round(time_diff, 2))
+
+        return travel_times
 
     def cleanup(self):
         """Remove todos os objetos visuais."""

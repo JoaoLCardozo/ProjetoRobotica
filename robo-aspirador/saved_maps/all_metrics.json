@@ -2,13 +2,13 @@
   {
     "execution": 1,
     "total_time": 180.0,
-    "coverage_percent": 82.68,
-    "energy": 37.17,
-    "distance": 13.01,
-    "collisions": 72,
+    "coverage_percent": 32.78,
+    "energy": 33.46,
+    "distance": 15.07,
+    "collisions": 5,
     "dirt_spawned": 59,
-    "dirt_collected": 31,
-    "dirt_collection_rate": 52.5,
-    "avg_collection_time": 46.34
+    "dirt_collected": 35,
+    "dirt_collection_rate": 59.3,
+    "avg_collection_time": 39.57
   }
 ]
