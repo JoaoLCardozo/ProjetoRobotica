@@ -78,8 +78,7 @@ class NodeRedClient:
         self.queue.put(payload)
 
     def send_periodic_update(self, data):
-        """Envia atualização periódica."""
-        # Formato esperado pelo Node-RED
+        """Envia atualização periódica com dados de sujeira."""
         payload = {
             'type': 'periodic_update',
             'timestamp': time.time(),
@@ -93,7 +92,12 @@ class NodeRedClient:
                 'collisions': data.get('collisions', 0),
                 'state': data.get('state', 'UNKNOWN'),
                 'x': data.get('x', 0),
-                'y': data.get('y', 0)
+                'y': data.get('y', 0),
+                # Novos campos de sujeira dinâmica
+                'dirt_spawned': data.get('dirt_spawned', 0),
+                'dirt_collected': data.get('dirt_collected', 0),
+                'dirt_uncollected': data.get('dirt_uncollected', 0),
+                'power_proxy': data.get('power_proxy', 0)
             }
         }
         self.queue.put(payload)
@@ -111,8 +115,7 @@ class NodeRedClient:
         self.queue.put(payload)
 
     def send_end(self, metrics):
-        """Notifica fim da execução."""
-        # Formato esperado pelo Node-RED
+        """Notifica fim da execução com estatísticas de sujeira."""
         payload = {
             'type': 'simulation_end',
             'timestamp': time.time(),
@@ -124,7 +127,12 @@ class NodeRedClient:
                 'energy_consumed': metrics.get('energy', 0),
                 'distance_traveled': metrics.get('distance', 0),
                 'collisions': metrics.get('collisions', 0),
-                'efficiency': metrics.get('area_per_energy', 0)
+                'efficiency': metrics.get('area_per_energy', 0),
+                # Novos campos de sujeira
+                'dirt_spawned': metrics.get('dirt_spawned', 0),
+                'dirt_collected': metrics.get('dirt_collected', 0),
+                'dirt_collection_rate': metrics.get('dirt_collection_rate', 0),
+                'avg_collection_time': metrics.get('avg_collection_time', 0)
             }
         }
         self.queue.put(payload)

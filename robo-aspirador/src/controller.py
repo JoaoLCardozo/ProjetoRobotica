@@ -1,4 +1,4 @@
-"""Controlador do Robô Aspirador com PID."""
+"""Controlador do Robô Aspirador com PID e busca de sujeira."""
 
 import numpy as np
 import math
@@ -13,7 +13,8 @@ class RobotState(Enum):
     AVOIDING = 3
     REVERSING = 4
     SEEKING = 5
-    FINISHED = 6
+    SEEKING_DIRT = 6  # Novo estado: buscando sujeira específica
+    FINISHED = 7
 
 
 class PIDController:
@@ -66,12 +67,13 @@ class PIDController:
 
 
 class NavigationController:
-    """Controlador de navegação com varredura e PID."""
+    """Controlador de navegação com varredura, PID e busca de sujeira."""
 
-    def __init__(self, robot, occupancy_map, environment):
+    def __init__(self, robot, occupancy_map, environment, dirt_manager=None):
         self.robot = robot
         self.map = occupancy_map
         self.env = environment
+        self.dirt_manager = dirt_manager  # Gerenciador de sujeira dinâmica
 
         self.state = RobotState.SWEEPING
 
@@ -99,6 +101,9 @@ class NavigationController:
         self.collision_count = 0
         self._last_collision_time = 0
 
+        # Alvo de sujeira atual
+        self.current_dirt_target = None
+
     def update(self, dt, sensor_readings, current_time):
         """Atualiza o controlador."""
         pos, angle = self.robot.get_pose()
@@ -115,9 +120,12 @@ class NavigationController:
         stats = self.map.get_coverage_stats()
         coverage = stats['coverage_percent']
 
-        if coverage >= 92:
-            self.state = RobotState.FINISHED
-            return 0, 0
+        # Verificar se há sujeira para buscar
+        if self.dirt_manager:
+            nearest_dirt, dirt_dist = self.dirt_manager.get_nearest_dirt(pos)
+            if nearest_dirt and self.state not in [RobotState.REVERSING, RobotState.TURNING]:
+                self.current_dirt_target = nearest_dirt
+                self.state = RobotState.SEEKING_DIRT
 
         # Detectar estagnação
         if self.frame_count % 120 == 0:
@@ -143,6 +151,9 @@ class NavigationController:
         if self.state == RobotState.TURNING:
             return self._do_turn()
 
+        if self.state == RobotState.SEEKING_DIRT:
+            return self._seek_dirt(pos, angle, sensor_readings)
+
         if self.state == RobotState.SEEKING:
             return self._seek(pos, angle, sensor_readings)
 
@@ -159,6 +170,39 @@ class NavigationController:
         else:
             self.state = RobotState.SWEEPING
             return self._sweep(pos, angle)
+
+    def _seek_dirt(self, pos, angle, sensor_readings):
+        """Busca sujeira específica."""
+        if not self.current_dirt_target or self.current_dirt_target.collected:
+            self.current_dirt_target = None
+            self.state = RobotState.SWEEPING
+            return self._sweep(pos, angle)
+
+        # Verificar obstáculos primeiro
+        obs = self._check_obstacles(sensor_readings)
+        if obs['blocked']:
+            return self._escape(sensor_readings)
+
+        # Calcular direção para a sujeira
+        dx = self.current_dirt_target.x - pos[0]
+        dy = self.current_dirt_target.y - pos[1]
+        target_angle = math.atan2(dy, dx)
+
+        error = self._norm_angle(target_angle - angle)
+
+        # Se precisa girar muito, gira primeiro
+        if abs(error) > 0.3:
+            if error > 0:
+                return self.forward_speed * 0.3, self.forward_speed * 0.8
+            else:
+                return self.forward_speed * 0.8, self.forward_speed * 0.3
+
+        # Vai em direção à sujeira
+        correction = self.angle_pid.compute(error)
+        left = self.forward_speed - correction
+        right = self.forward_speed + correction
+
+        return np.clip(left, 0.2, 1), np.clip(right, 0.2, 1)
 
     def _check_obstacles(self, r):
         """Verifica obstáculos."""
@@ -197,7 +241,7 @@ class NavigationController:
                 self.state = RobotState.SWEEPING
             return (-self.turn_speed, self.turn_speed) if self.sweep_direction > 0 else (self.turn_speed, -self.turn_speed)
 
-    def _escape(self):
+    def _escape(self, sensor_readings=None):
         """Escape de colisão."""
         now = time_module.time()
         if now - self._last_collision_time > 0.5:
@@ -214,7 +258,7 @@ class NavigationController:
         return self.forward_speed * 0.9, self.forward_speed * 0.4
 
     def _sweep(self, pos, angle):
-        """Varredura em linhas com controle PID."""
+        """Varredura em linhas com controle PID - adaptado para arena circular."""
         error = self._norm_angle(self.target_angle - angle)
 
         # Usa PID para calcular correção angular
@@ -224,18 +268,32 @@ class NavigationController:
         left = self.forward_speed - correction
         right = self.forward_speed + correction
 
-        margin = 0.35
-        if pos[0] < margin or pos[0] > self.env.width - margin or pos[1] < margin or pos[1] > self.env.height - margin:
-            self.angle_pid.reset()  # Reseta PID na curva
-            return self._uturn(pos, angle)
+        # Verificar se está perto da borda (arena circular)
+        if hasattr(self.env, 'get_distance_to_wall'):
+            dist_to_wall = self.env.get_distance_to_wall(pos[0], pos[1])
+            if dist_to_wall < self.robot.radius * 2.5:
+                self.angle_pid.reset()
+                return self._uturn(pos, angle)
+        else:
+            # Fallback para arena retangular
+            margin = 0.35
+            if pos[0] < margin or pos[0] > self.env.width - margin or pos[1] < margin or pos[1] > self.env.height - margin:
+                self.angle_pid.reset()
+                return self._uturn(pos, angle)
 
         return np.clip(left, 0.2, 1), np.clip(right, 0.2, 1)
 
     def _seek(self, pos, angle, r):
-        """Busca áreas não limpas."""
-        margin = 0.35
-        if pos[0] < margin or pos[0] > self.env.width - margin or pos[1] < margin or pos[1] > self.env.height - margin:
-            return self._uturn(pos, angle)
+        """Busca áreas não limpas - adaptado para arena circular."""
+        # Verificar proximidade da borda
+        if hasattr(self.env, 'get_distance_to_wall'):
+            dist_to_wall = self.env.get_distance_to_wall(pos[0], pos[1])
+            if dist_to_wall < self.robot.radius * 2.5:
+                return self._uturn(pos, angle)
+        else:
+            margin = 0.35
+            if pos[0] < margin or pos[0] > self.env.width - margin or pos[1] < margin or pos[1] > self.env.height - margin:
+                return self._uturn(pos, angle)
 
         obs = self._check_obstacles(r)
         if obs['blocked']:
@@ -257,7 +315,7 @@ class NavigationController:
         return self.forward_speed, self.forward_speed
 
     def _find_uncleaned(self, pos):
-        """Encontra direção para área não visitada."""
+        """Encontra direção para área não visitada - adaptado para arena circular."""
         from src.mapping import CELL_UNKNOWN, CELL_OBSTACLE
 
         best_angle, best_score = None, float('inf')
@@ -270,9 +328,15 @@ class NavigationController:
                 x = pos[0] + dist * math.cos(check_angle)
                 y = pos[1] + dist * math.sin(check_angle)
 
-                if x < 0.3 or x > self.env.width - 0.3 or y < 0.3 or y > self.env.height - 0.3:
-                    score += 80
-                    continue
+                # Verificar se está dentro da arena
+                if hasattr(self.env, 'is_inside_arena'):
+                    if not self.env.is_inside_arena(x, y, margin=0.3):
+                        score += 80
+                        continue
+                else:
+                    if x < 0.3 or x > self.env.width - 0.3 or y < 0.3 or y > self.env.height - 0.3:
+                        score += 80
+                        continue
 
                 gx, gy = self.map.world_to_grid(x, y)
                 if 0 <= gx < self.map.grid_width and 0 <= gy < self.map.grid_height:
@@ -303,8 +367,8 @@ class NavigationController:
 class SmartNavigationController(NavigationController):
     """Controlador que aprende com execuções anteriores."""
 
-    def __init__(self, robot, occupancy_map, environment, previous_map=None):
-        super().__init__(robot, occupancy_map, environment)
+    def __init__(self, robot, occupancy_map, environment, previous_map=None, dirt_manager=None):
+        super().__init__(robot, occupancy_map, environment, dirt_manager)
         self.previous_map = previous_map
         self.use_learned = previous_map is not None
         self.priority_targets = []

@@ -61,7 +61,7 @@
         "y": 140,
         "wires": [
             ["fn_start"],
-            ["fn_update", "fn_gauge_coverage", "fn_gauge_energy", "fn_chart_energy"],
+            ["fn_update", "fn_gauge_coverage", "fn_gauge_energy", "fn_chart_energy", "fn_gauge_dirt"],
             ["fn_end", "fn_chart_comparison"],
             ["fn_comparison"]
         ]
@@ -82,7 +82,7 @@
         "type": "function",
         "z": "flow_aspirador",
         "name": "Atualização",
-        "func": "const m = msg.payload.metrics || {};\n\n// Salvar trajetória\nlet traj = flow.get('trajectory') || [];\ntraj.push({x: m.x, y: m.y});\nflow.set('trajectory', traj);\n\n// Formatar saída\nmsg.payload = `📊 Exec ${msg.payload.execution} | ` +\n    `Cobert: ${(m.coverage_percent||0).toFixed(1)}% | ` +\n    `Energia: ${(m.energy_consumed||0).toFixed(1)}J | ` +\n    `Tempo: ${(m.time_elapsed_s||0).toFixed(0)}s | ` +\n    `Pos: (${(m.x||0).toFixed(2)}, ${(m.y||0).toFixed(2)})`;\n\nnode.status({fill:'green', shape:'dot', text:(m.coverage_percent||0).toFixed(1) + '%'});\nreturn msg;",
+        "func": "const m = msg.payload.metrics || {};\n\n// Salvar trajetória\nlet traj = flow.get('trajectory') || [];\ntraj.push({x: m.x, y: m.y});\nflow.set('trajectory', traj);\n\n// Formatar saída com sujeira\nmsg.payload = `📊 Exec ${msg.payload.execution} | ` +\n    `Cobert: ${(m.coverage_percent||0).toFixed(1)}% | ` +\n    `Energia: ${(m.energy_consumed||0).toFixed(1)}J | ` +\n    `Sujeira: ${m.dirt_collected||0}/${m.dirt_spawned||0} | ` +\n    `Tempo: ${(m.time_elapsed_s||0).toFixed(0)}s`;\n\nnode.status({fill:'green', shape:'dot', text:(m.coverage_percent||0).toFixed(1) + '%'});\nreturn msg;",
         "outputs": 1,
         "x": 690,
         "y": 100,
@@ -93,7 +93,7 @@
         "type": "function",
         "z": "flow_aspirador",
         "name": "Fim",
-        "func": "const s = msg.payload.summary || {};\nconst exec = msg.payload.execution;\n\n// Salvar no histórico\nlet history = flow.get('history') || [];\nhistory.push({\n    execution: exec,\n    coverage: s.coverage_percent,\n    time: s.total_time_s,\n    energy: s.energy_consumed,\n    distance: s.distance_traveled\n});\nflow.set('history', history);\n\nmsg.payload = `🏁 EXECUÇÃO ${exec} FINALIZADA\\n` +\n    `━━━━━━━━━━━━━━━━━━━━━━\\n` +\n    `✓ Cobertura: ${(s.coverage_percent||0).toFixed(1)}%\\n` +\n    `✓ Tempo: ${(s.total_time_s||0).toFixed(1)}s\\n` +\n    `✓ Energia: ${(s.energy_consumed||0).toFixed(1)}J\\n` +\n    `✓ Distância: ${(s.distance_traveled||0).toFixed(2)}m\\n` +\n    `✓ Colisões: ${s.collisions||0}`;\n\nnode.status({fill:'blue', shape:'ring', text:'Exec ' + exec + ' fim'});\nreturn msg;",
+        "func": "const s = msg.payload.summary || {};\nconst exec = msg.payload.execution;\n\n// Salvar no histórico\nlet history = flow.get('history') || [];\nhistory.push({\n    execution: exec,\n    coverage: s.coverage_percent,\n    time: s.total_time_s,\n    energy: s.energy_consumed,\n    distance: s.distance_traveled,\n    dirt_collected: s.dirt_collected,\n    dirt_spawned: s.dirt_spawned\n});\nflow.set('history', history);\n\nmsg.payload = `🏁 EXECUÇÃO ${exec} FINALIZADA\\n` +\n    `━━━━━━━━━━━━━━━━━━━━━━\\n` +\n    `✓ Cobertura: ${(s.coverage_percent||0).toFixed(1)}%\\n` +\n    `✓ Tempo: ${(s.total_time_s||0).toFixed(1)}s\\n` +\n    `✓ Energia: ${(s.energy_consumed||0).toFixed(1)}J\\n` +\n    `✓ Sujeira: ${s.dirt_collected||0}/${s.dirt_spawned||0} (${(s.dirt_collection_rate||0).toFixed(1)}%)\\n` +\n    `✓ Colisões: ${s.collisions||0}`;\n\nnode.status({fill:'blue', shape:'ring', text:'Exec ' + exec + ' fim'});\nreturn msg;",
         "outputs": 1,
         "x": 670,
         "y": 140,
@@ -142,6 +142,41 @@
         "x": 720,
         "y": 320,
         "wires": [["chart_energy"]]
+    },
+    {
+        "id": "fn_gauge_dirt",
+        "type": "function",
+        "z": "flow_aspirador",
+        "name": "Gauge Sujeira",
+        "func": "const m = msg.payload.metrics || {};\nconst collected = m.dirt_collected || 0;\nconst spawned = m.dirt_spawned || 0;\nconst rate = spawned > 0 ? (collected / spawned * 100) : 0;\n\nmsg.payload = rate;\nmsg.topic = 'Taxa de Coleta (%)';\nreturn msg;",
+        "outputs": 1,
+        "x": 710,
+        "y": 400,
+        "wires": [["gauge_dirt"]]
+    },
+    {
+        "id": "gauge_dirt",
+        "type": "ui_gauge",
+        "z": "flow_aspirador",
+        "name": "Sujeira Coletada",
+        "group": "aspirador_group_metrics",
+        "order": 3,
+        "width": "6",
+        "height": "3",
+        "gtype": "donut",
+        "title": "Sujeira Coletada",
+        "label": "%",
+        "format": "{{value | number:1}}",
+        "min": 0,
+        "max": 100,
+        "colors": ["#CA3838", "#E6E600", "#00B500"],
+        "seg1": "40",
+        "seg2": "70",
+        "diff": false,
+        "className": "",
+        "x": 920,
+        "y": 400,
+        "wires": []
     },
     {
         "id": "fn_chart_comparison",

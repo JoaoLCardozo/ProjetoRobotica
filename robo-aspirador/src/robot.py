@@ -22,9 +22,9 @@ class VacuumRobot:
         self.sensor_range = 1.0
         self.sensor_angles = [-90, -45, 0, 45, 90]
 
-        # Velocidades
-        self.max_velocity = 1.2
-        self.max_angular_velocity = 3.5
+        # Velocidades - Vmax = 0.5 × tamanho do robô (diâmetro)
+        self.max_velocity = 0.5 * (2 * self.radius)  # 0.5 × diâmetro = 0.15 m/s
+        self.max_angular_velocity = 2.0
 
         # Criar robô
         self.robot_id = self._create_robot()
@@ -33,6 +33,10 @@ class VacuumRobot:
         self.energy_consumed = 0.0
         self.distance_traveled = 0.0
         self.last_position = np.array(start_pos)
+
+        # Colisões
+        self.collision_count = 0
+        self._last_collision_check = 0
 
     def _create_robot(self):
         """Cria o robô com visual moderno azul e branco."""
@@ -107,14 +111,31 @@ class VacuumRobot:
         self.set_wheel_velocities(0, 0)
 
     def update_metrics(self):
-        """Atualiza distância percorrida."""
+        """Atualiza distância percorrida e verifica colisões."""
         pos, _ = self.get_pose()
         self.distance_traveled += np.linalg.norm(pos - self.last_position)
         self.last_position = pos.copy()
 
     def get_metrics(self):
-        """Retorna métricas."""
-        return {'energy_consumed': self.energy_consumed, 'distance_traveled': self.distance_traveled}
+        """Retorna métricas incluindo proxy de energia (torque × velocidade)."""
+        # Obter velocidade atual
+        vel, ang_vel = p.getBaseVelocity(self.robot_id)
+        linear_speed = math.sqrt(vel[0]**2 + vel[1]**2)
+        angular_speed = abs(ang_vel[2])
+
+        # Proxy de energia: torque × velocidade
+        # Torque estimado proporcional à velocidade angular
+        torque_estimate = angular_speed * 0.5  # Nm estimado
+        power_proxy = torque_estimate * linear_speed
+
+        return {
+            'energy_consumed': self.energy_consumed,
+            'distance_traveled': self.distance_traveled,
+            'current_speed': linear_speed,
+            'angular_speed': angular_speed,
+            'power_proxy': power_proxy,
+            'collisions': self.collision_count
+        }
 
     def reset(self):
         """Reseta para posição inicial."""
@@ -124,3 +145,4 @@ class VacuumRobot:
         self.energy_consumed = 0.0
         self.distance_traveled = 0.0
         self.last_position = np.array(self.start_pos)
+        self.collision_count = 0
