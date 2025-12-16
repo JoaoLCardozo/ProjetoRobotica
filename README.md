@@ -1,108 +1,105 @@
+# 🤖 Simulação de Robôs com PyBullet e Node-RED
 
-# 🤖 Robô Aspirador Autônomo com PyBullet e Node-RED
-
-> Simulação de um robô aspirador autônomo utilizando PyBullet para física e Node-RED para supervisão e visualização.
+Trabalho acadêmico de Robótica contendo dois projetos de simulação: um **manipulador planar** e um **robô aspirador autônomo**. Ambos utilizam PyBullet para física e Node-RED para supervisão.
 
 ---
 
 ## 📋 Índice
 
 - [Visão Geral](#visão-geral)
-- [Funcionalidades](#funcionalidades)
-- [Comportamento de Aprendizado](#comportamento-de-aprendizado)
-- [Métricas](#métricas)
-- [Execução](#execução)
-- [Estrutura](#estrutura)
+- [Projeto 1: Manipulador Planar](#-manipulador-planar-2-dof)
+- [Projeto 2: Robô Aspirador](#-robô-aspirador-autônomo)
 - [Instalação](#instalação)
-- [Configuração Node-RED](#configuração-node-red)
-- [Requisitos Atendidos](#requisitos-atendidos)
-- [Autor](#autor)
+- [Node-RED](#configuração-node-red)
 
 ---
 
 ## Visão Geral
 
-O projeto simula um robô aspirador móvel diferencial, equipado com 5 sensores ultrassônicos, capaz de navegar autonomamente, mapear ambientes e otimizar rotas a partir de execuções anteriores. A interface de supervisão e visualização é feita via Node-RED.
+| Projeto | Tipo | Controle | Sensores |
+|---------|------|----------|----------|
+| **Manipulador Planar** | Braço articulado 2-DOF | PID por junta | Encoder, torque |
+| **Robô Aspirador** | Móvel diferencial | Navegação reativa | 5x ultrassônico |
 
 ---
 
-## Funcionalidades
+## 🦾 Manipulador Planar 2-DOF
 
-| Funcionalidade         | Descrição                                      |
-|------------------------|------------------------------------------------|
-| Navegação Autônoma     | Varredura sistemática (boustrophedon)          |
-| Evasão de Obstáculos   | 5 sensores ultrassônicos                       |
-| Mapeamento 2D          | Grid de ocupação construído em tempo real      |
-| Aprendizado            | Usa mapa anterior para otimizar rotas          |
+Simulação de um braço robótico 6-DOF (KUKA IIWA) que detecta e alcança alvos aleatórios usando controle PID por junta e cinemática inversa.
 
----
+### Funcionalidades
 
-## Comportamento de Aprendizado
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| Cinemática Inversa | Calcula ângulos para posição desejada |
+| Controle PID | Malha fechada por torque em cada junta |
+| Detecção de Alvos | Sensor de presença para detectar alvos |
+| Geração Aleatória | Alvos gerados aleatoriamente no workspace |
+| Visualização | Interface gráfica com marcadores visuais |
 
-| Execução | Comportamento                                 |
-|----------|-----------------------------------------------|
-| 1ª       | Exploração completa, cria mapa                |
-| 2ª       | Usa mapa salvo, evita áreas já limpas         |
-| 3ª+      | Otimização refinada                           |
+### Visualizações do Projeto
 
----
+#### Braço Robótico em Ação
+![Braço Robótico](Midias/Braco.png)
 
-## Métricas
+#### Sensor de Aproximação
+![Sensor de Aproximação](Midias/SendorDeAproximacao.png)
 
-| Métrica       | Objetivo    |
-|---------------|-------------|
-| Cobertura (%) | Maximizar   |
-| Tempo         | Minimizar   |
-| Energia (J)   | Minimizar   |
-| Colisões      | Minimizar   |
+#### Dashboard Node-RED
+![Dashboard Node-RED](Midias/DashboardNode.png)
 
----
+#### Configuração Node-RED
+![Node-RED](Midias/NodeRed.png)
 
-## Execução
+### Execução
 
 ```bash
-cd Robo-Aspirador
+cd braco6
+pip install -r requirements.txt
 python main.py
 ```
 
-| Argumento      | Descrição             | Padrão |
-|----------------|----------------------|--------|
-| `--executions` | Número de execuções  | 3      |
-| `--time`       | Tempo máximo (s)     | 90     |
-| `--no-gui`     | Sem interface        | False  |
-
----
-
-## Estrutura
+### Estrutura
 
 ```
-Robo-Aspirador/
-├── main.py                # Script principal
-├── node_red_flow.json     # Flow Node-RED
-├── src/
-│   ├── robot.py           # Classe do robô
-│   ├── environment.py     # Ambiente PyBullet
-│   ├── mapping.py         # Mapa de ocupação
-│   ├── controller.py      # Navegação
-│   └── node_red_client.py # Cliente HTTP
-├── models/                # URDFs
-└── saved_maps/            # Mapas entre execuções
+braco6/
+├── main.py              # Script principal
+├── requirements.txt     # Dependências
+└── ...
 ```
 
 ---
 
-<p align="center">
-  <img src="images/robo-aspirador.png" alt="Robô Aspirador" width="450"/>
-</p>
+## 🧹 Robô Aspirador Autônomo
+
+Simulação de um robô aspirador autônomo que navega pelo ambiente, aspira sujeiras e desvia de obstáculos enquanto mapeia o ambiente em tempo real.
+
+### Robô Aspirador em Ação
+![Robô Aspirador](Robo-Aspirador.png)
 
 ### Funcionalidades
 
 | Funcionalidade | Descrição |
 |----------------|-----------|
 | Navegação Autônoma | Varredura sistemática (boustrophedon) |
-| Evasão de Obstáculos | 5 sensores ultrassônicos |
+| Aspiração de Sujeiras | Detecção e coleta automática de objetos |
+| Evasão de Obstáculos | 5 sensores ultrassônicos para evitar colisões |
 | Mapeamento 2D | Grid de ocupação construído em tempo real |
 | Aprendizado | Usa mapa anterior para otimizar rotas |
+
+### Visualizações do Projeto
+
+#### Desempenho Final
+![Desempenho Final](Midias/DesempenhoFinal.png)
+
+#### Mapa da Trajetória
+![Mapa da Trajetória](Midias/Mapa%20da%20Trajetoria.png)
+
+#### Gráficos de Performance
+![Gráficos](Midias/Print%20grafico.png)
+
+#### Dashboard Node-RED
+![Node-RED Robô Aspirador](Midias/NodeRed-roboAspirador.png)
 
 ### Comportamento de Aprendizado
 
@@ -124,7 +121,7 @@ Robo-Aspirador/
 ### Execução
 
 ```bash
-cd Robo-Aspirador
+cd robo-aspirador
 python main.py
 ```
 
@@ -137,7 +134,7 @@ python main.py
 ### Estrutura
 
 ```
-Robo-Aspirador/
+robo-aspirador/
 ├── main.py                # Script principal
 ├── node_red_flow.json     # Flow Node-RED
 ├── src/
@@ -145,13 +142,13 @@ Robo-Aspirador/
 │   ├── environment.py     # Ambiente PyBullet
 │   ├── mapping.py         # Mapa de ocupação
 │   ├── controller.py      # Navegação
+│   ├── dirt_manager.py    # Gerenciamento de sujeiras
 │   └── node_red_client.py # Cliente HTTP
 ├── models/                # URDFs
 └── saved_maps/            # Mapas entre execuções
 ```
 
 ---
-
 
 ## Instalação
 
@@ -161,7 +158,7 @@ git clone https://github.com/JoaoLCardozo/ProjetoRobotica.git
 cd ProjetoRobotica
 
 # Instalar dependências
-pip install pybullet numpy requests
+pip install -r requirements.txt
 ```
 
 ---
@@ -185,6 +182,15 @@ node-red
 
 ## ✅ Requisitos Atendidos
 
+### Manipulador
+- ✅ Manipulador planar 2-DOF
+- ✅ Controle PID por junta
+- ✅ Cinemática direta/inversa
+- ✅ Desvio de obstáculos
+- ✅ Pick-and-place
+- ✅ Supervisão Node-RED
+
+### Aspirador
 - ✅ Robô móvel diferencial
 - ✅ 5 sensores ultrassônicos
 - ✅ Exploração autônoma
@@ -194,9 +200,8 @@ node-red
 
 ---
 
-## 👥 Autor
+## 👥 Autores
 
-**João Luiz Ferreira Cardozo** - [@JoaoLCardozo](https://github.com/JoaoLCardozo)
-
-
+- **Igor Gabriel Silva Gusmão**
+- **João Luiz Ferreira Cardozo** - [@JoaoLCardozo](https://github.com/JoaoLCardozo)
 
