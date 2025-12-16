@@ -23,7 +23,7 @@ Trabalho acadêmico de Robótica contendo dois projetos de simulação: um **man
 
 ---
 
-## 🦾 Manipulador Planar 2-DOF
+## 🦾 Manipulador Planar 6-DOF
 
 Simulação de um braço robótico 6-DOF (KUKA IIWA) que detecta e alcança alvos aleatórios usando controle PID por junta e cinemática inversa.
 
