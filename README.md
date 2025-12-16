@@ -1,13 +1,13 @@
 # 🤖 Simulação de Robôs com PyBullet e Node-RED
 
-Trabalho acadêmico de Robótica contendo dois projetos de simulação: um **manipulador planar** e um **robô aspirador autônomo**. Ambos utilizam PyBullet para física e Node-RED para supervisão.
+Trabalho acadêmico de Robótica contendo dois projetos de simulação: um **manipulador planar 6-DOF** e um **robô aspirador autônomo**. Ambos utilizam PyBullet para física e Node-RED para supervisão.
 
 ---
 
 ## 📋 Índice
 
 - [Visão Geral](#visão-geral)
-- [Projeto 1: Manipulador Planar](#-manipulador-planar-2-dof)
+- [Projeto 1: Manipulador Planar 6](#-manipulador-planar-2-dof)
 - [Projeto 2: Robô Aspirador](#-robô-aspirador-autônomo)
 - [Instalação](#instalação)
 - [Node-RED](#configuração-node-red)
@@ -18,7 +18,7 @@ Trabalho acadêmico de Robótica contendo dois projetos de simulação: um **man
 
 | Projeto | Tipo | Controle | Sensores |
 |---------|------|----------|----------|
-| **Manipulador Planar** | Braço articulado 2-DOF | PID por junta | Encoder, torque |
+| **Manipulador Planar** | Braço articulado 6-DOF | PID por junta | Encoder, torque |
 | **Robô Aspirador** | Móvel diferencial | Navegação reativa | 5x ultrassônico |
 
 ---
